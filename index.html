@@ -1,81 +1,243 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Tournament Decklist Submission</title>
+  <title>游戏王线上赛 - 卡组提交</title>
+  <!-- Supabase JS SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
+    :root {
+      --bg-gradient: radial-gradient(circle at 50% 0%, #1e1b4b 0%, #090d16 100%);
+      --card-bg: rgba(23, 27, 44, 0.75);
+      --card-border: rgba(99, 102, 241, 0.25);
+      --accent: #6366f1;
+      --accent-hover: #4f46e5;
+      --accent-glow: rgba(99, 102, 241, 0.35);
+      --text-main: #f8fafc;
+      --text-sub: #94a3b8;
+      --input-bg: rgba(15, 23, 42, 0.6);
+      --input-border: rgba(148, 163, 184, 0.2);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+
     body {
-      font-family: system-ui, -apple-system, sans-serif;
-      background: #0f172a;
-      color: #f8fafc;
+      min-height: 100vh;
+      background: var(--bg-gradient);
+      color: var(--text-main);
       display: flex;
       justify-content: center;
-      padding: 40px 16px;
+      align-items: center;
+      padding: 32px 16px;
     }
-    .container {
-      background: #1e293b;
-      padding: 24px;
-      border-radius: 12px;
-      border: 1px solid #334155;
+
+    .wrapper {
       width: 100%;
-      max-width: 440px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+      max-width: 460px;
     }
-    h2 { margin-top: 0; text-align: center; }
-    label { display: block; margin-top: 14px; font-size: 14px; font-weight: 600; }
-    input {
+
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 32px 28px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 0 0 25px var(--accent-glow);
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .header h2 {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      background: linear-gradient(135deg, #fff 30%, #a5b4fc 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 6px;
+    }
+
+    .header p {
+      font-size: 13px;
+      color: var(--text-sub);
+    }
+
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #cbd5e1;
+      margin-bottom: 6px;
+    }
+
+    .required {
+      color: #f43f5e;
+      margin-left: 2px;
+    }
+
+    input[type="text"] {
       width: 100%;
-      box-sizing: border-box;
-      padding: 10px;
-      margin-top: 6px;
-      border-radius: 6px;
-      border: 1px solid #475569;
-      background: #0f172a;
+      padding: 12px 14px;
+      background: var(--input-bg);
+      border: 1px solid var(--input-border);
+      border-radius: 10px;
       color: #fff;
+      font-size: 14px;
+      outline: none;
+      transition: all 0.2s ease;
     }
-    button {
+
+    input[type="text"]:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    /* 自定义文件上传框 */
+    .file-dropzone {
+      position: relative;
+      border: 2px dashed var(--input-border);
+      background: var(--input-bg);
+      border-radius: 12px;
+      padding: 20px 14px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .file-dropzone:hover {
+      border-color: var(--accent);
+      background: rgba(99, 102, 241, 0.08);
+    }
+
+    .file-dropzone input[type="file"] {
+      position: absolute;
+      top: 0;
+      left: 0;
       width: 100%;
-      margin-top: 22px;
-      padding: 12px;
-      border-radius: 6px;
-      border: none;
-      background: #2563eb;
-      color: white;
-      font-size: 16px;
-      font-weight: bold;
+      height: 100%;
+      opacity: 0;
       cursor: pointer;
     }
-    button:hover { background: #1d4ed8; }
-    button:disabled { background: #64748b; cursor: not-allowed; }
-    #msg { margin-top: 16px; text-align: center; font-weight: 500; font-size: 14px; }
+
+    .upload-icon {
+      font-size: 26px;
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .file-text {
+      font-size: 13px;
+      color: var(--text-sub);
+    }
+
+    .file-name {
+      display: block;
+      margin-top: 6px;
+      font-size: 12px;
+      color: #818cf8;
+      word-break: break-all;
+    }
+
+    /* 提交按钮 */
+    .submit-btn {
+      width: 100%;
+      margin-top: 12px;
+      padding: 14px;
+      border-radius: 10px;
+      border: none;
+      background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      box-shadow: 0 8px 20px rgba(99, 102, 241, 0.35);
+      transition: all 0.2s ease;
+    }
+
+    .submit-btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 24px rgba(99, 102, 241, 0.5);
+    }
+
+    .submit-btn:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    .submit-btn:disabled {
+      background: #334155;
+      color: #64748b;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    /* 提示消息 */
+    #status-msg {
+      margin-top: 16px;
+      font-size: 13px;
+      text-align: center;
+      min-height: 20px;
+      line-height: 1.5;
+    }
   </style>
 </head>
 <body>
 
-  <div class="container">
-    <h2>Decklist Submission</h2>
-    <form id="submissionForm">
-      <label for="playerName">Player / In-Game Name</label>
-      <input type="text" id="playerName" required placeholder="e.g. Yugi Muto" />
+  <div class="wrapper">
+    <div class="card">
+      <div class="header">
+        <h2>卡组登记与提交</h2>
+        <p>请上传清晰完整的构筑截图（支持 MD / EDOPro / 微信小程序截图）</p>
+      </div>
 
-      <label for="discordTag">Discord Tag / Contact</label>
-      <input type="text" id="discordTag" required placeholder="e.g. yugi#1234" />
+      <form id="submissionForm">
+        <div class="form-group">
+          <label for="playerName">选手名称 / ID<span class="required">*</span></label>
+          <input type="text" id="playerName" required placeholder="例如：海马濑人" />
+        </div>
 
-      <label for="deckArchetype">Deck Name / Archetype</label>
-      <input type="text" id="deckArchetype" placeholder="e.g. Branded Despia" />
+        <div class="form-group">
+          <label for="discordTag">Discord 账号 / 联系方式<span class="required">*</span></label>
+          <input type="text" id="discordTag" required placeholder="例如：kaiba#1234 或 微信号" />
+        </div>
 
-      <label for="deckImage">Deck Screenshot (.png / .jpg, max 5MB)</label>
-      <input type="file" id="deckImage" accept="image/png, image/jpeg" required />
+        <div class="form-group">
+          <label for="deckArchetype">卡组系列 / 轴名（选填）</label>
+          <input type="text" id="deckArchetype" placeholder="例如：烙印深渊之兽 / 白龙" />
+        </div>
 
-      <button type="submit" id="submitBtn">Submit Decklist</button>
-      <div id="msg"></div>
-    </form>
+        <div class="form-group">
+          <label>卡组截图（PNG/JPG，不超过 5MB）<span class="required">*</span></label>
+          <div class="file-dropzone" id="dropzone">
+            <span class="upload-icon">📷</span>
+            <div class="file-text" id="dropzoneText">点击此处或拖拽图片到这里</div>
+            <span class="file-name" id="fileName"></span>
+            <input type="file" id="deckImage" accept="image/png, image/jpeg" required />
+          </div>
+        </div>
+
+        <button type="submit" class="submit-btn" id="submitBtn">立即提交卡组</button>
+        <div id="status-msg"></div>
+      </form>
+    </div>
   </div>
 
   <script>
-    // --- REPLACE THESE WITH YOUR OWN KEYS ---
+    // --- 替换为你自己的 Supabase 项目配置 ---
     const SUPABASE_URL = "https://myoxcxhithwxkfgyrdol.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im15b3hjeGhpdGh3eGtmZ3lyZG9sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA4Nzg5NTMsImV4cCI6MjEwNjQ1NDk1M30.sPUDajl_ffvfH-Sb361RGHwTfqXiN0GPDYS1I4R1D78";
     // ----------------------------------------
@@ -83,51 +245,66 @@
     const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     const form = document.getElementById("submissionForm");
-    const msg = document.getElementById("msg");
-    const btn = document.getElementById("submitBtn");
+    const fileInput = document.getElementById("deckImage");
+    const fileNameDisplay = document.getElementById("fileName");
+    const dropzoneText = document.getElementById("dropzoneText");
+    const submitBtn = document.getElementById("submitBtn");
+    const statusMsg = document.getElementById("status-msg");
+
+    // 选中图片时显示文件名
+    fileInput.addEventListener("change", (e) => {
+      if (fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+        fileNameDisplay.innerText = `已选文件: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+        dropzoneText.innerText = "重新选择图片";
+      } else {
+        fileNameDisplay.innerText = "";
+        dropzoneText.innerText = "点击此处或拖拽图片到这里";
+      }
+    });
 
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
-      msg.innerText = "";
+      statusMsg.innerText = "";
 
-      const fileInput = document.getElementById("deckImage");
       const file = fileInput.files[0];
       if (!file) return;
 
-      // Guard: reject anything over 5MB
+      // 限制 5MB
       if (file.size > 5 * 1024 * 1024) {
-        msg.innerText = "File is larger than 5MB. Please compress or resize it.";
-        msg.style.color = "#f87171";
+        statusMsg.style.color = "#f43f5e";
+        statusMsg.innerText = "文件超过 5MB，请压缩后再上传。";
         return;
       }
 
-      btn.disabled = true;
-      msg.innerText = "Uploading image and saving entry...";
-      msg.style.color = "#38bdf8";
+      submitBtn.disabled = true;
+      submitBtn.innerText = "正在上传卡组...";
+      statusMsg.style.color = "#38bdf8";
+      statusMsg.innerText = "正在上传图片并登记参赛信息，请稍候...";
 
       try {
         const playerName = document.getElementById("playerName").value.trim();
         const discordTag = document.getElementById("discordTag").value.trim();
         const deckArchetype = document.getElementById("deckArchetype").value.trim();
 
-        // 1. Generate unique filename: timestamp_cleanPlayerName.ext
-        const safeName = playerName.replace(/[^a-zA-Z0-9]/g, "_");
+        // 规范化文件名：时间戳 + 过滤后的选手名称
+        const safeName = playerName.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, "_");
         const ext = file.name.split(".").pop();
         const filePath = `${Date.now()}_${safeName}.${ext}`;
 
-        // 2. Upload file to Supabase Storage bucket 'decklists'
+        // 1. 上传至 Supabase Storage 的 'decklists' 存储桶
         const { error: uploadError } = await client.storage
           .from("decklists")
           .upload(filePath, file, { upsert: false });
 
         if (uploadError) throw uploadError;
 
-        // 3. Get the public URL of the uploaded image
+        // 2. 获取图片的公开 URL
         const { data: urlData } = client.storage
           .from("decklists")
           .getPublicUrl(filePath);
 
-        // 4. Insert entry row into 'submissions' table
+        // 3. 写入 submissions 数据表
         const { error: dbError } = await client
           .from("submissions")
           .insert([{
@@ -139,15 +316,19 @@
 
         if (dbError) throw dbError;
 
-        msg.innerText = "Decklist submitted successfully!";
-        msg.style.color = "#4ade80";
+        // 提交成功反馈
+        statusMsg.style.color = "#10b981";
+        statusMsg.innerText = "✅ 卡组提交成功！祝比赛顺利！";
         form.reset();
+        fileNameDisplay.innerText = "";
+        dropzoneText.innerText = "点击此处或拖拽图片到这里";
       } catch (err) {
         console.error(err);
-        msg.innerText = "Error: " + (err.message || "Failed to submit.");
-        msg.style.color = "#f87171";
+        statusMsg.style.color = "#f43f5e";
+        statusMsg.innerText = "❌ 提交失败: " + (err.message || "网络错误，请重试");
       } finally {
-        btn.disabled = false;
+        submitBtn.disabled = false;
+        submitBtn.innerText = "立即提交卡组";
       }
     });
   </script>
