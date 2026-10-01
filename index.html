@@ -288,9 +288,11 @@
         const deckArchetype = document.getElementById("deckArchetype").value.trim();
 
         // 规范化文件名：时间戳 + 过滤后的选手名称
-        const safeName = playerName.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, "_");
+        // 新代码：
         const ext = file.name.split(".").pop();
-        const filePath = `${Date.now()}_${safeName}.${ext}`;
+        // 生成一个由纯英文、数字构成的安全文件名，如：1790894323972_a8f9c2.jpg
+        const randomId = Math.random().toString(36).substring(2, 8);
+        const filePath = `${Date.now()}_${randomId}.${ext}`;
 
         // 1. 上传至 Supabase Storage 的 'decklists' 存储桶
         const { error: uploadError } = await client.storage
