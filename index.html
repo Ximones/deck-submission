@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tournament Decklist Submission</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0f172a;
+      color: #f8fafc;
+      display: flex;
+      justify-content: center;
+      padding: 40px 16px;
+    }
+    .container {
+      background: #1e293b;
+      padding: 24px;
+      border-radius: 12px;
+      border: 1px solid #334155;
+      width: 100%;
+      max-width: 440px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+    }
+    h2 { margin-top: 0; text-align: center; }
+    label { display: block; margin-top: 14px; font-size: 14px; font-weight: 600; }
+    input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 10px;
+      margin-top: 6px;
+      border-radius: 6px;
+      border: 1px solid #475569;
+      background: #0f172a;
+      color: #fff;
+    }
+    button {
+      width: 100%;
+      margin-top: 22px;
+      padding: 12px;
+      border-radius: 6px;
+      border: none;
+      background: #2563eb;
+      color: white;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button:hover { background: #1d4ed8; }
+    button:disabled { background: #64748b; cursor: not-allowed; }
+    #msg { margin-top: 16px; text-align: center; font-weight: 500; font-size: 14px; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h2>Decklist Submission</h2>
+    <form id="submissionForm">
+      <label for="playerName">Player / In-Game Name</label>
+      <input type="text" id="playerName" required placeholder="e.g. Yugi Muto" />
+
+      <label for="discordTag">Discord Tag / Contact</label>
+      <input type="text" id="discordTag" required placeholder="e.g. yugi#1234" />
+
+      <label for="deckArchetype">Deck Name / Archetype</label>
+      <input type="text" id="deckArchetype" placeholder="e.g. Branded Despia" />
+
+      <label for="deckImage">Deck Screenshot (.png / .jpg, max 5MB)</label>
+      <input type="file" id="deckImage" accept="image/png, image/jpeg" required />
+
+      <button type="submit" id="submitBtn">Submit Decklist</button>
+      <div id="msg"></div>
+    </form>
+  </div>
+
+  <script>
+    // --- REPLACE THESE WITH YOUR OWN KEYS ---
+    const SUPABASE_URL = "YOUR_SUPABASE_PROJECT_URL";
+    const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
+    // ----------------------------------------
+
+    const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const form = document.getElementById("submissionForm");
+    const msg = document.getElementById("msg");
+    const btn = document.getElementById("submitBtn");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      msg.innerText = "";
+
+      const fileInput = document.getElementById("deckImage");
+      const file = fileInput.files[0];
+      if (!file) return;
+
+      // Guard: reject anything over 5MB
+      if (file.size > 5 * 1024 * 1024) {
+        msg.innerText = "File is larger than 5MB. Please compress or resize it.";
+        msg.style.color = "#f87171";
+        return;
+      }
+
+      btn.disabled = true;
+      msg.innerText = "Uploading image and saving entry...";
+      msg.style.color = "#38bdf8";
+
+      try {
+        const playerName = document.getElementById("playerName").value.trim();
+        const discordTag = document.getElementById("discordTag").value.trim();
+        const deckArchetype = document.getElementById("deckArchetype").value.trim();
+
+        // 1. Generate unique filename: timestamp_cleanPlayerName.ext
+        const safeName = playerName.replace(/[^a-zA-Z0-9]/g, "_");
+        const ext = file.name.split(".").pop();
+        const filePath = `${Date.now()}_${safeName}.${ext}`;
+
+        // 2. Upload file to Supabase Storage bucket 'decklists'
+        const { error: uploadError } = await client.storage
+          .from("decklists")
+          .upload(filePath, file, { upsert: false });
+
+        if (uploadError) throw uploadError;
+
+        // 3. Get the public URL of the uploaded image
+        const { data: urlData } = client.storage
+          .from("decklists")
+          .getPublicUrl(filePath);
+
+        // 4. Insert entry row into 'submissions' table
+        const { error: dbError } = await client
+          .from("submissions")
+          .insert([{
+            player_name: playerName,
+            discord_tag: discordTag,
+            deck_archetype: deckArchetype || null,
+            image_url: urlData.publicUrl
+          }]);
+
+        if (dbError) throw dbError;
+
+        msg.innerText = "Decklist submitted successfully!";
+        msg.style.color = "#4ade80";
+        form.reset();
+      } catch (err) {
+        console.error(err);
+        msg.innerText = "Error: " + (err.message || "Failed to submit.");
+        msg.style.color = "#f87171";
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
